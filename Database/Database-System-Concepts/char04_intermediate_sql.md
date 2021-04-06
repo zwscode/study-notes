@@ -235,3 +235,385 @@ check (time_slot_id in (select time_slot_id from time_slot))
 
 An `assertion` is a predicate expressing a condition that we wish the database always to satisfy. Consider the following constraints, which can be expressed using assertions.
 
+# 5. SQL Data Types and Schemas (Page 154)
+
+## 1)Date and Time Types in SQL
+* date: A calendar date containing a (four-digit) year, month, and day of the month.
+* time: The time of day, in hours, minutes, and seconds. A variant, time(p), can be used to specify the number of fractional digits for seconds (the default being 0).
+* timestamp: A combination of date and time. A variant, timestamp(p), can be used to specify the number of fractional digits for seconds (the default here being 6). Time-zone information is also stored if with timezone is specified.
+
+## Type Conversion and Formatting Functions
+
+### How to do type conversion:
+
+We can use an expression of the form `cast (e as t)` to convert an expression e to the type t.
+
+MySQL offers a `format` function. Oracle and PostgreSQL offer a set of functions, `to_char`, `to_number`, and `to_date`. SQL Server offers a `convert` function.
+
+###  `coalesce` function to deal with Null values
+
+Definition:
+It takes an arbitrary number of arguments, all of which must be of the same type, and returns the first non-null argument.
+
+For example, if we wished to display instructor IDs and salaries but to show null salaries as 0, we would write:
+
+```sql
+select ID , coalesce(salary, 0) as salary
+from instructor
+```
+
+### `decode` function
+
+Definition:
+decode (value, match-1, replacement-1, match-2, replacement-2, …, match-N, replacement-N, default-replacement);
+
+It compares value against the match values and if a match is found, it replaces the attribute value with the corresponding replacement value. If no match succeeds, then the attribute value is replaced with the default replacement value.
+
+Example:
+```sql
+select ID, decode (salary, null, 'N/A', salary) as salary
+from instructor
+```
+
+## Default Values
+
+```sql
+create table student
+    (ID varchar (5),
+    name varchar (20) not null,
+    dept_name varchar (20),
+    tot_cred numeric (3,0) default 0,
+    primary key (ID));
+```
+
+We can omit the attribute `tot_cred` in a insert statement:
+```sql
+insert into student( ID , name, dept name)
+    values ('12789', 'Newman', 'Comp. Sci.');
+```
+
+## Large-Object Types
+
+`clob` and `blob`:
+SQL provides large-object data types for character data (`clob`) and binary data (`blob`).
+
+```sql
+book review clob(10KB)
+image blob(10MB)
+movie blob(2GB)
+```
+
+## User-Defined Types
+
+`distinct types`:
+```sql
+create type Dollars as numeric(12,2) final;
+
+create table department
+    (dept_name varchar (20),
+    building varchar (15),
+    budget Dollars);
+```
+
+Warning:
+As a result of strong type checking, the expression (department.budget+20) would not be accepted since the attribute and the integer constant 20 have different types.
+
+`domain`:
+SQL hadasimilar but subtly different notion of domain (introduced in SQL-92 ), which can add integrity constraints to an underlying type. 
+```sql
+create domain DDollars as numeric(12,2) not null;
+
+create domain YearlySalary numeric(8,2)
+    constraint salary_value_test check(value >= 29000.00);
+```
+
+## Generating Unique Key Values
+
+```sql
+ID number(5) generated always as identity
+```
+When the always option is used, any insert statement must avoid specifying a value for the automatically generated key. To do this, use the syntax for insert in which the attribute order is specified.
+
+If we replace `always` with `by default`, we have the option of specifying our own choice of ID or relying on the system to generate one.
+
+## Create Table Extensions
+
+Motive for `create table ... like ...`:
+Applications often require the creation of tables that have the same schema as an existing table.
+
+```sql
+create table temp instructor like instructor;
+```
+
+Motive for `create table ... as ...`:
+When writing a complex query, it is often useful to store the result of a query as a new table.
+
+```sql
+create table t1 as
+    (select *
+    from instructor
+    where dept_name = 'Music')
+    with data;
+```
+
+## Schemas, Catalogs, and Environments
+
+Intro:
+Contemporary database systems provide a three-level hierarchy for naming relations. The top level of the hierarchy consists of `catalogs`, each of which
+can contain `schemas`.
+
+Each user has a default catalog and schema, and the combination is unique to the user. When a user connects to a database system, the default catalog and schema are set up for the connection; this corresponds to the current directory being set to the user’s home directory when the user logs into an operating system.
+
+To identify a relation uniquely, a three-part name may be used, for example, `catalog5.univ schema.course`.
+
+We may omit the catalog component, in which case the catalog part of the name is
+considered to be the default catalog for the connection. Thus, if `catalog5` is the default catalog, we can use univ `schema.course` to identify the same relation uniquely.
+
+With multiple catalogs and schemas available, different applications and different users can work independently without worrying about name clashes. Moreover, multiple versions of an application—one a production version, other test versions—can run on the same database system.
+
+# 6. Index Definition in SQL
+
+Intro & Definition:
+An `index` on an attribute of a relation is a data structure that allows the database system to find those tuples in the relation that have a specified value for that attribute efficiently, without scanning through all the tuples of the relation.
+
+Good to know:
+Although the syntax that we show is widely used and supported by many database systems, it is not part of the SQL standard. The SQL standard does not support control of the physical database schema; it restricts itself to the logical database schema.
+
+We create an index with the `create index` command, which takes the form:
+
+```sql
+create index <index-name> on <relation-name> (<attribute-list>);
+```
+
+To define an index named dept index on the instructor relation with dept name as
+the search key, we write:
+
+```sql
+create index dept index on instructor (dept name);
+```
+
+If we wish to declare that the search key is a candidate key, we add the attribute unique to the index definition. Thus, the command:
+```sql
+create unique index dept index on instructor (dept name);
+```
+
+The index name we specified for an index is required to drop an index. The drop index command takes the form:
+```sql
+drop index <index-name>;
+```
+
+# 7. Authorization
+
+## Granting and Revoking of Privileges
+
+`privileges`: select, insert, update, delete.
+
+### grant
+The `grant` statement is used to confer authorization.
+Basic form of the grant statement:
+```sql
+grant <privilege list>
+on <relation name or view name>
+to <user/role list>;
+```
+
+Example(grant `Amit` and `Satoshi` select authorization):
+```sql
+grant select on department to Amit, Satoshi;
+```
+
+Exaple(grant update authorization):
+```sql
+grant update (budget) on department to Amit, Satoshi;
+```
+
+Detail about `grant update` and `grant insert`statement:
+If update authorization is included in a grant statement, the list of attributes on which update authorization is to be granted optionally appears in parentheses immediately after the update keyword. If the list of attributes is omitted, the update privilege will be granted on all attributes of the relation.
+
+Detail about username `public`:
+The user name public refers to all current and future users of the system. Thus, privileges granted to public are implicitly granted to all current and future users.
+
+### revoke
+
+To revoke an authorization, we use the `revoke` statement. It takes a form almost identical to that of grant:
+```sql
+revoke <privilege list>
+on <relation name or view name>
+from <user/role list>;
+```
+
+Example:
+```sql
+revoke select on department from Amit, Satoshi;
+revoke update (budget) on department from Amit, Satoshi;
+```
+
+## Roles
+
+### Introduction of the conecept: `Role`.
+
+Problem:
+
+Granting privileges to users becomes tedious when you have to grant privileges to the same type of users the same privileges whenever a new user is introduced.
+
+Solution:
+
+A better approach would be to specify the authorizations that every instructor is to be given, and to identify separately which database users are instructors. The system can use these two pieces of information to determine the authorizations of each instructor. 
+
+Result:
+
+When a new instructor is hired, a user identifier must be allocated to him, and he must be identified as an instructor. Individual permissions given to instructors need not be specified again.
+
+Definition of `Role`:
+
+The notion of roles captures this concept. A set of roles is created in the database. Authorizations can be granted to roles, in exactly the same fashion as they are granted
+to individual users. Each database user is granted a set of roles (which may be empty) that she is authorized to perform.
+
+In our university database, examples of roles could include *instructor, teaching_assistant, student, dean, and department_chair*.
+
+### Detals about `Role`:
+
+Any authorization that can be granted to a user can be granted to a role. Roles are granted to users just as authorizations are.
+
+1.create role.
+```sql
+    create role instructor;
+```
+
+2. grant privileges to role.
+```sql
+grant select on takes
+to instructor;
+```
+
+3. grant role to another role, grant role to user.
+```sql
+create role dean;
+grant instructor to dean;
+grant dean to Satoshi;
+```
+
+Thus, the privileges of a user or a role consist of:
+• All privileges directly granted to the user/role.
+• All privileges granted to roles that have been granted to the user/role.
+
+
+## Authorization on Views
+
+## Authorizations on Schema
+
+Intro:
+The SQL standard specifies a primitive authorization mechanism for the database schema: 
+Only the owner of the schema can carry out any modification to the schema, such as creating or deleting relations, adding or dropping attributes of relations, and adding or dropping indices.
+
+### grant references privilege
+
+SQL includes a references privilege that permits a user to declare foreign keys when creating relations. The SQL references privilege is granted on specific attributes in a manner like that for the update privilege.
+
+```sql
+grant references (dept_name) on department to Mariano
+```
+
+## Transfer of Privileges
+
+Intro:
+A user who has been granted some form of authorization may be allowed to pass on this authorization to other users. 
+By default,a user/rolethatis granteda privilege is not authorized to grant that privilege to another user/role.
+If we wish to grant a privilege and to allow the recipient to pass the privilege on to other users, we append the `with grant option` clause to the appropriate `grant` command.
+
+Example(grant the authorization to be allowed to pass on the authorization):
+```sql
+grant select on department to Amit with grant option;
+```
+
+## Revoking of Privileges
+
+###  `cascading revocation`
+
+Intro:
+Suppose that the database administrator decides to revoke the authorization of user U1. Since U4 has authorization from U1, that authorization should be revoked as well.
+
+![authorization-graph](res/char04/authorization_graph.png)
+
+As we just saw, revocation of a privilege from a user/role may cause other users/roles also to lose that privilege. This behavior is called `cascading revocation`.
+
+How to avoid `cascading revocation`:
+
+Example:
+```sql
+revoke select on department from Amit, Satoshi restrict;
+```
+
+`strict` doesn't guarentee the execution of the revoke statement:
+In this case, the system returns an error if there are any cascading revocations and does not carry out the revoke action.
+
+How to explicitly specify `cascading revocation`:
+The keyword `cascade` can be used instead of restrict to indicate that revocation should cascade.
+
+
+### Problem of `cascading revocation`:
+
+Intro:
+Cascading revocation is inappropriate in many situations. Suppose Satoshi has the role of dean, grants instructor to Amit, and later the role dean is revoked from Satoshi (perhaps because Satoshi leaves the university); Amit continues to be employed on the faculty and should retain the instructor role.
+
+Solution:
+
+To deal with this situation, SQL permits a privilege to be granted by a role rather than by a user. 
+
+To grant a privilege with the grantor set to the current role associated with a session, we can add the clause:
+```sql
+granted by current role
+```
+
+Then revoking of roles/privileges from Satoshi will not resulting revoking of roles/privileges from Amit. Even if Satoshi was the user who executed the grant.
+
+## Row-Level Authorization
+
+# Summary
+
+## Join
+
+1. natural join
+Natural join provides a simple way to write queries over multiple relations in which a where predicate would otherwise equate attributes with matching names from each relation. This convenience comes at the risk of query seman-
+tics changing if a new attribute is added to the schema.
+
+2. inner join
+
+3. outer join, left outer join, right outer join.
+Outer join provides a means to retain tuples that, due to a join predicate (whether a natural join, a join-using, or a join-on), would otherwise not appear anywhere in the result relation. The retained tuples are padded with null
+values so as to conform to the result schema.
+
+4. join-using
+
+5. join-on
+   
+## View
+
+View relations can be defined as relations containing the result of queries.
+
+## Transactions
+
+Transactions are sequences of queries and updates that together carry out a task.
+
+## Integrity constraints
+
+Integrity constraints ensure that changes made to the database by authorized users do not result in a loss of data consistency.
+
+## Referential-integrity constraints
+
+Referential-integrity constraints ensure that a value that appears in one relation for a given set of attributes also appears for a certain set of attributes in another relation.
+
+## Domain constraints
+
+Domain constraints specify the set of possible values that may be associated with anattribute. Such constraints may also prohibit the use of null values for particular attributes.
+
+## Index
+
+Indices are important for efficient processing of queries, as well as for efficient enforcement of integrity constraints. Although not part of the SQL standard, SQL commands for creation of indices are supported by most database systems.
+
+## Authorization
+
+SQL authorization mechanisms allow one to differentiate among the users of the database on the type of access they are permitted on various data values in the database.
+
+Roles enable us to assign a set of privileges to a user according to the role that the user plays in the organization.
+
